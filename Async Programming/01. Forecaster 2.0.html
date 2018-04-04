@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Forecatser</title>
+    <style>
+        #content { width: 400px; }
+        #request { text-align: center; }
+        .bl { width: 300px; }
+        #current { text-align: center; font-size: 2em; }
+        #upcoming { text-align: center; }
+        .condition { text-align: left; display: inline-block; }
+        .symbol { font-size: 4em; display: inline-block; }
+        .forecast-data { display: block; }
+        .upcoming { display: inline-block; margin: 1.5em; }
+        .label { margin-top: 1em; font-size: 1.5em; background-color: aquamarine; font-weight: 400; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+</head>
+<body>
+<div id="content">
+    <div id="request">
+        <input id="location" class='bl' type="text">
+        <input id="submit" class="bl" type="button" value="Get Weather">
+    </div>
+    <div id="forecast" style="display:none">
+        <div id="current">
+            <div class="label">Current conditions</div>
+        </div>
+        <div id="upcoming">
+            <div class="label">Three-day forecast</div>
+        </div>
+    </div>
+</div>
+<script>
+    function attachEvents() {
+        let baseUrl = 'https://judgetests.firebaseio.com'
+        $('#submit').click(loadForecast)
+
+        function request(endpoint) {
+            return $.ajax({
+                method: 'GET',
+                url: baseUrl + endpoint
+            })
+        }
+        
+        function loadForecast() {
+            request("/locations.json")
+                .then(displayLocations)
+                .catch(handleError)
+        }
+
+
+
+
+        function displayLocations(dataArr) {
+            let inputLocation= $('#location').val()
+            let code = dataArr
+                .filter(loc => loc['name']=== inputLocation)
+                .map(m => m['code'])[0]
+            if(!code){
+                handleError()
+            }
+
+            let todayForecast = request(`/forecast/today/${code}.json`)
+            let upcomingForecast = request(`/forecast/upcoming/${code}.json`)
+            Promise.all([todayForecast, upcomingForecast])
+                .then(displayAllForecastInfo)
+                .catch(handleError)
+        }
+
+        function displayAllForecastInfo(dataRespond) {
+            let todayData = dataRespond[0]
+            let upcomingData = dataRespond[1]
+            $('#forecast').css('display','block');
+
+            $('#current').append($('<span class="condition symbol">*</span>'))
+            $('#current').append('<span class="condition">')
+            $('#current span.condition').not('.symbol').append($(`<span class="forecast-data">${todayData.name}</span>`))
+            $('#current span.condition').not('.symbol').append($(`<span class="forecast-data">${todayData.forecast.low}/${todayData.forecast.high}</span>`))
+            $('#current span.condition').not('.symbol').append($(`<span class="forecast-data">${todayData.forecast.condition}</span>`))
+
+            $('#upcoming').append('<span class="upcoming"></span>')
+            $('#upcoming.upcoming').append('<span class="symbol">*</span>')
+            $('#upcoming.upcoming').append(`<span class="forecast-data">${upcomingData.forecast[0].low}/${upcomingData.forecast[0].high}</span>`)
+
+
+
+            console.log(todayData);
+            console.log(upcomingData);
+        }
+
+        function handleError(err) {
+            
+        }
+
+        // $('#submit').click(function () {
+        //     let inputText = $('#location').val()
+        //     let code = getTheCode(inputText)
+        //     console.log(code);
+        // })
+        //
+        //
+        // function getTheCode(inputText) {
+        //     request("/locations.json").then(function (res) {
+        //             for (let eachNameLocationCode of res) {
+        //                 if (inputText === eachNameLocationCode.name) {
+        //                     console.log(eachNameLocationCode.code)
+        //                     return eachNameLocationCode.code
+        //
+        //                 }
+        //             }
+        //         }).catch(function (err) {
+        //     })
+        // }
+    }
+    attachEvents();
+</script>
+</body>
+</html>
